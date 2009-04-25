@@ -1,7 +1,8 @@
 begin
-  require 'iconv'
-rescue Object
-  puts "no iconv, you might want to look into it."
+  require "active_support"
+rescue LoadError
+  require "rubygems"
+  require "active_support"
 end
 
 require 'digest/sha1'
@@ -12,12 +13,11 @@ module PermalinkFu
 
     # This method does the actual permalink escaping.
     def escape(string)
-      result = ((translation_to && translation_from) ? Iconv.iconv(translation_to, translation_from, string) : string).to_s
-      result.gsub!(/[^\x00-\x7F]+/, '') # Remove anything non-ASCII entirely (e.g. diacritics).
-      result.gsub!(/[^\w_ \-]+/i,   '') # Remove unwanted chars.
-      result.gsub!(/[ \-]+/i,      '-') # No more than one of the separator in a row.
-      result.gsub!(/^\-|\-$/i,      '') # Remove leading/trailing separator.
+      result = ActiveSupport::Multibyte::Chars.new(string.to_s).normalize(:kd)
+      result.gsub!(/[^\w -]+/n, '') # strip unwanted characters
+      result.strip!
       result.downcase!
+      result.gsub!(/[ -]+/, '-') # separate by single dashes
       result.size.zero? ? random_permalink(string) : result
     rescue
       random_permalink(string)
